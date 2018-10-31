@@ -1,0 +1,97 @@
+---
+title: 'Problem Set #5'
+author: "David Kane"
+date: "2018-10-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+```
+
+This problem set uses filings from the [Federal Election Commission](https://www.fec.gov/data/advanced/?tab=bulk-data). Instead of us providing the data to you, as we have in prior problem sets, you are expected deal with the data yourself. **Do not check in these zip files, or the txt files created when you unzip them, into your repo.** Some of them are too big and will be rejected by GitHub. As always, we must be able to replicate your work --- go from your Rmd to your html --- with just the files in your repo. This means that you need to **automate** the process of downloading and unzipping files.
+
+See the end of the problem set for reminders about process and grading. 
+
+
+We have a new [Mad Libs](https://en.wikipedia.org/wiki/Mad_Libs) style question --- in addition to our usual tables and graphics --- in which we provide a sentence with an X which you must replace with the correct answer. For example, we write "The biggest state is X." You copy/paste that sentence as your answer, but replace the X with inline R code that determines the correct replacement for X dynamically.
+
+## Question 1
+
+Download the 2007-2008 data from the "All candidates" tab. It should be in a file called `weball08.zip`. Throughout this problem set, you **should not** do these downloads "by hand" and move them to your project directory from the terminal command line, as you have done in previous problem sets. Instead, you must automate this procedure. (Recall [my code](https://github.com/davidkane9/Midterm-1-redemption) from the midterm "Redemption" exercise, i.e., the file called analysis.Rmd.) Read the [all candidates file description](https://www.fec.gov/campaign-finance-data/all-candidates-file-description/) for background. There are only 5 variables we care about from this data: candidate name, party affiliation, ending cash and candidate state. Use the variable names: `cand_id`, `cand_name`, `party`, `cash`, and `cand_state`.
+
+Fill in the Xs, using reasonable formatting. (My name is "David Kane", not "Kane, David", much less "KANE, DAVID".)
+
+* The state with the most rows is X.
+* The candidate with the longest full name is X.
+* The candidate with the longest last name is X.
+
+Create a table with the 5 parties with the largest aggregate cash holdings at the end of the period. Make the table look nice, including sensible column names (which are rarely the same as the variable names used internally), reasonable alignment, and formatting the cash with a dollar sign and commas.
+
+## Question 2
+
+Download the 2007-2008 data from the "Committee master" tab. Read the associated documentation. It is tough to work with data unless you understand what it means. The two key variables are the `cand_id` which is an ID for each candidate (and which should map to the `cand_id` variable in the data from Question 1) and the `cmte_id`, which should map to the data that you will download for Question 3). As you can (and should!) read in more detail, there are two primary entities in FEC regulation: candidates (the people who run for office) and committees (the organizations which raise and spend money). There is not a one-to-one mapping between these entities. In fact, some candidates have no committees and some committees have no candidates.
+
+With this data, create a tibble with three variables: `cand_id`, `cmte_id` and `cmte_party`, which is derived from "CMTE_PTY_AFFILIATION". Transform `cmte_party` to have three levels (plus NA): "Democrat", "Republican" and "Other". There are three levels in CMTE_PTY_AFFILIATION which (I think) map (obviously?) to Democrat and three which map to Republican. Put everything else in "Other". Create a 3x2 table which shows, for the three levels of `cmte_party` (ignore NA values), the number of unique `cand_id`'s and the number of unique `cmte_id`'s.
+
+## Question 3
+ 
+Download the 2007-2008 data from the "Contributions by individuals" tab. This is a big data set! (Learning how to work with largish data sets is one of the purposes of this course.) You will find it handy to have separate code chunks for the initial processing of the data and for subsequent analysis. (The latter is run much more often than the former.) You will want to understand exactly what the code chunk option `cache` is for. In order to read in this data without warnings or errors, you will need to explore the various arguments to `read_delim()`.
+
+Combine this individual donation data with candidate information using the committee information to link the two. You will need `party` from the candidates download as well as `date`, `amount`, `employer` and `occupation` from the individual donations download. Restrict the sample to donations for which the `employer` is, exactly, "Harvard University," for which `occupation` includes the word "Professor," and for which `party` is not NA. (Hint: This should be 767 rows.)
+
+We are interested in the number of donations greater than zero, i.e., for `amount > 0`. We want to break up this count into an 8x3 table in which the rows are quarter start dates like 2008-04-01 and the columns are the three levels for `party`. Each cell will then represent the number of positive donations for each of the three parties and for the three month (i.e., one quarter) time period after the start of the quarter. 
+
+
+
+
+## Question 4 on R Pubs
+
+Create a new document in your repo: ps_5_graphic.Rmd. Add, commit and push it, as normal. This document, like all your documents, should be reproducible. That is, if we open it up and knit it, everything should work. To achieve that, whatever data you need had better be checked in to your repo. (Hint: You can just save a small rds file (using `write_rds()`) in ps_5.Rmd which you can then read in with `read_rds()` in ps_5_graphic.Rmd.)
+
+Create a graphic using just the 1,615 donations from individuals whose `employer` is, exactly, "Harvard University". Your graphic must show the `date` of the donation on the x-axis. Your graphic must use, in addition to the date, the variables `amount` and `party` as well.
+
+Publish the graphic, as a stand-alone item (i.e., without the answers to the other questions in this problem set) to R Pubs. (Recall [the example](http://rpubs.com/dkane/polling-in-italy) that we did in class a few weeks ago.) In other words, the only "answer" you need to provide for Question 4 is the url for this document. Something like:
+
+http://rpubs.com/dkane/polling-in-italy
+ 
+But, obviously, using the FEC data and with a more relevant name.
+
+## Workflow
+
+* It is your responsibility to keep your repo clean and organized. You need to create (at least) two new files: `ps_5.Rmd` and `ps_5.html`. They must be named exactly this. There is nothing wrong with committing other files, like your .Rproj or .gitignore file, but be intentional. Future employers will judge you on the cleanliness and organisation of your workspace. That judgment starts now.
+
+* You should commit your work regularly and push every hour or so. Committing ensures that you keep track of what you are doing. It would make sense to, for example, commit after completing each of the problems. You do not need to push after every commit (although I often do). Pushing just ensures that your work is safe on GitHub should your computer fail. I could never stand to lose more than an hour of work, so I always push at least once an hour. If you do not have at least 5 commits with non-trivial commit messages, we will take points off.
+
+* The two documents you are submitting are very different. 
+    + The Rmd file is a *technical* document, an accurate record of your work which allows you (and us!) to reproduce your html easily. It should be well-organized, nicely formatted and clean. Non-technical readers will not understand it, but that is OK.  
+    + The html file is a *presentation* document, designed for non-technical readers. No R code or weird warnings or obscure messages mar its pleasing appearance. It is a simple list of the answers to the questions. There is no need for you to write anything beyond the tables and graphics themselves.
+    
+* **It must be possible for us to replicate your work.**   To be specific, we should be able to connect to your repo, open up your Rmd file, hit knit, and create the same html that was created by you in the repo.  
+
+* The problem set is due Wednesday, October 31 by 10:05 AM. Although you have two "late days" that you may use during the semester, we recommend that you save them for when you really need them. If you intend to use one (or two) late days, you must notify Albert/Nick. (E-mailing them both with notifications like this is wise.) Note that, for this problem set and going forward, we have decreased the weekly DataCamp to 4 hours, thereby allowing 6 hours for problem set work. (Thanks to several students who suggested that this was a worthwhile trade-off.)
+
+* We did much related work during class this week. Use any of it you like! But note that these questions are not exactly the same as the ones we looked at in class, so be sure to answer the questions we are asking.
+
+## Key Points for Grading
+
+### Process
+* Clean repo
+* At least 5 commits with sensible commit messages, i.e., not "stuff" or "update."
+* Once we download your repo, can we replicate your work easily. (It is OK if you use a library which we need to download, but your Rmd better include all the necessary `library()` commands.)
+* List the colleagues you worked with, if any.
+
+### For Rmd file
+* Make your code readable. Formatting matters.
+* Include comments in your code. Rough guideline: You should have as many lines of comments as you have lines of code.
+* Follow the [Tidyverse Style Guide](http://style.tidyverse.org/index.html).
+
+
+### For html file 
+* Spelling and punctuation matter.
+* Use captions, titles, axis labels and so on to make it clear what your tables and graphics mean.
+* Provide clear axis labels.  
+* Create a title and/or subtitle that describe the key result of your graphics.
+* Use your best judgment. For example, sometimes axis labels are unnecessary. [*Data Visualization: A practical introduction*](http://socviz.co/) by Kieran Healy is an excellent (and free!) guide to making high quality graphics with R. 
+
