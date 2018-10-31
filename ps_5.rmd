@@ -134,3 +134,38 @@ top_money <- candidates %>%
 head(top_money, 5) %>%
   kable(col.names = c("Political Party", "Total Cash Holdings"))
 ```
+
+## Question 2
+```{r, echo = FALSE, message = FALSE, cache = TRUE}
+## We download the committee data to be used in the following analysis.
+download.file(url = "https://www.fec.gov/files/bulk-downloads/2008/cm08.zip", destfile = "commiteedata.zip")
+## We unzip the folder into which the data is downloaded.
+unzip("commiteedata.zip")
+## We read the data into R.
+committee <- read_delim("cm.txt", delim = "|", col_names = FALSE, escape_double = FALSE) 
+```
+
+```{r, echo = FALSE}
+## We create the variables of interest using the data we read in.
+## We consolidate the relevant party variables based on abbreviation, which takes different cases.
+condensed_committee <- committee %>% 
+  transmute(cand_id = X15, cmte_id = X1, cmte_party = X11) %>% 
+  filter(!is.na(cmte_party)) %>%
+  mutate(cmte_party = case_when(tolower(cmte_party) == "rep" ~ "Republican",
+                                tolower(cmte_party) == "dem" ~ "Democrat",
+                                TRUE ~ "Other"))
+
+## We group by party and then count the distinct values for candidates and committee. 
+## We arrange in the order of distinct candidates, just so that the table looks good. 
+committee_summary <- condensed_committee %>% 
+  group_by(cmte_party) %>% 
+  summarize(distinct_cand = n_distinct(cand_id),
+            distinct_cmte = n_distinct(cmte_id)) %>%
+  arrange(desc(distinct_cand))
+
+## Finally, we report the final table using kable function.
+## We add a caption and appropriate column names so the table looks good. 
+committee_summary %>% 
+  kable(caption = "Number of Distinct Candidates and Committees by Party",
+        col.names = c("Political Party", "Unique Candidates", "Unique Committees"))
+```
