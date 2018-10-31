@@ -1,0 +1,136 @@
+---
+title: "Problem Set 5"
+author: "Rana Bansal"
+date: "10/26/2018"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+## Here we load the necessary R packages for completing this assignment and doing all the necessary analysis. 
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(knitr)
+library(openintro)
+library(fs)
+library(utils)
+library(dplyr)
+library(janitor)
+library(BBmisc)
+library(stringr)
+library(lubridate)
+```
+
+## Question 1
+```{r, echo = FALSE}
+## Download the data for candidates. Then, unzip the folder that it is downloaded in. 
+download.file(url = "https://www.fec.gov/files/bulk-downloads/2008/weball08.zip", 
+              destfile = "weball08.zip")
+unzip("weball08.zip")
+```
+
+```{r, echo = FALSE, message = FALSE, cache = TRUE}
+## Now, we read in the data and provide information for how to sort it into columns.
+## We provide names for our columns of interest using transmute function. 
+candidates <- read_delim("weball08.txt", delim = "|", col_names = FALSE, escape_double = FALSE) %>%
+  transmute(cand_id = X1, 
+            cand_name = X2, 
+            party = X5, 
+            cash = X11, 
+            cand_state = X19)
+
+## Next, we replace those states with "00" as "No State" as 00 does not make sense.
+candidates$cand_state <- gsub("00", "No State", candidates$cand_state)
+
+## We create a data frame for states with the most rows, and we start by grouping by state.
+## Next, we calculate the total number of rows for each state group.
+## Then, we arrange state groups by the number of rows in in descending order. 
+state_most_rows <- candidates %>%
+  group_by(cand_state) %>%
+  summarize(state_total = sum(cand_state == cand_state)) %>%
+  arrange(desc(state_total))
+
+## Take the first value of the data frame listing the states with most rows and add to string. 
+cat(paste0("The state with the most rows is ", abbr2state(state_most_rows$cand_state[1]), "."))
+
+## This is a capitalization function (inspired by posting on stack overflow) 
+## Source here: https://stackoverflow.com/questions/6364783/capitalize-the-first-letter-of-both-words-in-a-two-word-string
+capital <- function(x) {
+  s <- strsplit(tolower(x), " ")[[1]]
+  paste(toupper(substring(s, 1, 1)), substring(s, 2),
+      sep = "", collapse = " ")
+}
+
+## This is a name formatting function (inspired by posting on stack overflow) 
+## Source here: https://stackoverflow.com/questions/33826650/last-name-first-name-to-first-name-last-name
+name_format <- function(name) {
+  name_capitalized <- capital(name) 
+  split_name <- strsplit(name_capitalized, ",")[[1]]
+  paste(trimws(split_name[2]), split_name[1])
+}
+
+## We create a new variable for name length that is the number of characters in candidates name.
+## We then arrange in descending order of this length with the top item of the table being longest name. 
+longest_name <- candidates %>%
+  mutate(name_length = nchar(cand_name)) %>%
+  arrange(desc(name_length))
+
+## We select the top item from that list that we found, put in appropriate format, and report the result. 
+cat(paste0("The candidate with the longest full name is ", name_format(longest_name$cand_name[1]), "."))
+
+## We first create a last name variable by selecting the first component of the cand_name variable.
+## Then, we find the length of the last name using the nchar command.
+## Finally, we arrange in descending order of the length of last name.
+longest_last_name <- candidates %>%
+  mutate(last_name = word(cand_name, 1)) %>%
+  mutate(last_name_length = nchar(last_name)) %>%
+  arrange(desc(last_name_length))
+
+## We select the top item from that list that we found, put in appropriate format, and report the result.
+cat(paste0("The candidate with the longest last name is ", name_format(longest_last_name$cand_name[1]), "."))
+
+## We create a function for formatting the money in a format that is readable and appropriate using formatC. 
+formatting_money  <- function(x) {
+  paste0("$", formatC(as.numeric(x), format = "f", digits = 0, big.mark = ","))
+}
+
+## Here we are creating full names based on the party codes using the guidelines on FEC website.
+## We select the necessary columns that we need and then we find the total cash per party. 
+## We arrange in descending order. 
+top_money <- candidates %>%
+  select(cand_id, cand_name, party, cash, cand_state) %>%
+  mutate(new_party = case_when(
+    party == "AMP" ~ "American Party",
+    party == "CON" ~ "Constitution Party",
+    party == "CRV" ~ "Conservative Party",
+    party == "CST" ~ "Constitutional Party",
+    party == "DEM" ~ "Democratic Party",
+    party == "Dem" ~ "Democratic Party",
+    party == "DFL" ~ "Democratic-Farmer-Labor",
+    party == "FRE" ~ "Freedom Party",
+    party == "GRE" ~ "Green Party",
+    party == "IND" ~ "Independent",
+    party == "JCN" ~ "Jewish/Christian National",
+    party == "LIB" ~ "Liberal Party",
+    party == "NNE" ~ "None",
+    party == "NPA" ~ "No Party Affiliation",
+    party == "OTH" ~ "Other",
+    party == "REF" ~ "Reform",
+    party == "REP" ~ "Republican Party",
+    party == "Rep" ~ "Republican Party",
+    party == "RTL" ~ "Right To Life Party",
+    party == "SOC" ~ "Socialist Party U.S.A.",
+    party == "TLP" ~ "American",
+    party == "N/A" ~ "Not Applicable",
+    party == "NA" ~ "Not Applicable",
+    TRUE ~ "Information Not Included"
+  )) %>%
+  group_by(new_party) %>%
+  summarize(total_cash = sum(cash)) %>%
+  mutate(new_cash = formatting_money(total_cash)) %>%
+  arrange(desc(total_cash)) %>%
+  select(new_party, new_cash)
+
+## We print out the 5 political parties with the highest donations from the table above. 
+head(top_money, 5) %>%
+  kable(col.names = c("Political Party", "Total Cash Holdings"))
+```
