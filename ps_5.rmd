@@ -169,3 +169,78 @@ committee_summary %>%
   kable(caption = "Number of Distinct Candidates and Committees by Party",
         col.names = c("Political Party", "Unique Candidates", "Unique Committees"))
 ```
+
+## Question 3
+```{r downloads3, message = FALSE, cache = TRUE, include = FALSE}
+## Here, we download the individual contribution data. 
+download.file(url = "https://www.fec.gov/files/bulk-downloads/2008/indiv08.zip", destfile = "indiv_data.zip")
+## We unzip the folder into which the data is downloaded.
+unzip("indiv_data.zip")
+## We read the data into R.
+indiv_contrib <- read_delim("itcont.txt", delim = "|", col_names = FALSE, escape_double = FALSE) 
+```
+
+```{r, echo = FALSE}
+## We join together the all candidates and the committee data here. 
+candidates_committee <- left_join(candidates, condensed_committee, 
+                       by = "cand_id") %>% 
+  select(cand_id, cmte_id, party)
+
+## We create a condensed version of individual contribution data to use in this part. 
+condensed_indiv <- indiv_contrib %>% 
+  transmute(cmte_id = X1, date = X14, amount = X15, name = X8, employer = X12, occupation = X13) 
+
+## We next link the individual and committee data together and slect variables we want.
+## We only want those employed by harvard who are professors and who have a party.
+## Finally, we only want those who actually contributed (donated positive amount).
+linked_donations <- left_join(condensed_indiv, candidates_committee, 
+                       by = "cmte_id") %>% 
+  select(party, date, amount, employer, occupation, name) %>% 
+  mutate(date = mdy(date)) %>% 
+  filter(employer == "HARVARD UNIVERSITY",
+         str_detect(tolower(occupation), "professor")) %>% 
+  filter((!is.na(party))) %>%
+  filter(amount > 0)
+
+## We update the dates using the floor_date function as we want quarterly data.
+## We summarize the total number in each polical party. 
+## Finally, we arrange the quarterly data. 
+updated_dates <- linked_donations %>%
+  mutate(quarterly = floor_date(date, "3 months")) %>%
+  group_by(quarterly) %>% 
+  summarize(DEM = sum(tolower(party) == "dem"),
+            REP = sum(tolower(party) == "rep"),
+            OTHER = sum(!tolower(party) %in% c("dem", "rep"))) %>%
+  arrange(quarterly)
+
+updated_dates %>%
+  kable(caption = "Number of Donations, by quarter and political party",
+          col.names = c("Quarter Start Date", "Democrat", "Republican", "Other"))
+```
+
+## Question 4
+```{r, echo = FALSE}
+## We create the dataset of all the donors that are employed by Harvard University.
+all_donor <- left_join(condensed_indiv, candidates_committee, 
+                       by = "cmte_id") %>% 
+  select(party, date, amount, employer, occupation, name) %>% 
+  mutate(date = mdy(date)) %>% 
+  filter(employer == "HARVARD UNIVERSITY")
+
+## Again, we find the party affiliations of all the Harvard donors and look at quarterly contribution.
+## We sum the total amounts of contributions for quarter by party. 
+all_donor_edited <- all_donor %>%
+  mutate(party_affil = case_when(tolower(party) == "rep" ~ "Republican",
+                                tolower(party) == "dem" ~ "Democrat",
+                                TRUE ~ "Other")) %>%
+  mutate(quarterly = floor_date(date, "3 months")) %>%
+  arrange(quarterly) %>%
+  mutate(party_affil = fct_relevel(party_affil, "Democrat", "Republican", "Other")) %>%
+  group_by(quarterly, party_affil) %>%
+  summarize(donation_total = sum(amount))
+
+ggplot(all_donor_edited, aes(x = quarterly, y = donation_total, fill = party_affil)) + geom_bar(position = "stack", stat = "identity")
+```
+
+## Collaborators
+Maddie Chai, Sean Hughes
